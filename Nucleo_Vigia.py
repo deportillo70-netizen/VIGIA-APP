@@ -1,4 +1,4 @@
-# PROYECTO: VIG.IA - CEREBRO (COSTOS BASE 5)
+# PROYECTO: VIG.IA - CEREBRO (VENEZUELA COSTING)
 # ARCHIVO: Nucleo_Vigia.py
 
 import google.generativeai as genai
@@ -8,7 +8,6 @@ import datetime
 import os
 import sqlite3
 
-# --- 1. GESTOR DE BASE DE DATOS ---
 class GestorDatos:
     def __init__(self, db_name="historial_vigia.db"):
         self.db_name = db_name
@@ -48,7 +47,6 @@ class GestorDatos:
         conn.commit()
         conn.close()
 
-# --- 2. CEREBRO PRINCIPAL (IA) ---
 class InspectorIndustrial:
     def __init__(self):
         self.db = GestorDatos()
@@ -75,8 +73,8 @@ class InspectorIndustrial:
             return lista[0] if lista else None
         except: return None
 
-    # MODIFICADO: Ahora recibe el flag 'calcular_costos'
-    def analizar_imagen_con_ia(self, api_key, rutas_imagenes, datos_ins, datos_tec, calcular_costos=False):
+    # MODIFICADO: Ahora recibe 'tasa_cambio'
+    def analizar_imagen_con_ia(self, api_key, rutas_imagenes, datos_ins, datos_tec, calcular_costos=False, tasa_cambio=1.0):
         genai.configure(api_key=api_key)
         modelo = self._encontrar_modelo_disponible()
         if not modelo: return "ERROR: No hay modelos IA disponibles."
@@ -88,28 +86,30 @@ class InspectorIndustrial:
                 lista_imagenes_pil.append(img)
         except: return "Error al abrir alguna de las imágenes."
 
-        # Instrucción Condicional de Costos
         instruccion_costos = ""
         if calcular_costos:
-            instruccion_costos = """
-            5. ESTIMACIÓN DE COSTOS (CLASE 5 AACE - REFERENCIAL):
-            - Genera una Tabla Markdown: | Partida | Cantidad Aprox | Precio Unit. Ref (USD) | Total (USD) |
-            - Estima costos de reparación, limpieza, reemplazo o pintura según los daños vistos.
-            - Usa precios de mercado internacional promedio para industria Oil & Gas.
-            - IMPORTANTE: Agrega una nota legal indicando que es Clase 5 (-50%/+100%).
+            instruccion_costos = f"""
+            5. ESTIMACIÓN DE COSTOS (MERCADO VENEZOLANO - CLASE 5):
+            - Tasa de Cambio Referencial: {tasa_cambio} Bs/USD.
+            - Considera sobrecostos logísticos de Venezuela, mano de obra local y repuestos importados.
+            - Genera una Tabla Markdown estricta con estas columnas:
+              | Partida / Acción | Cantidad | Unitario ($) | Total ($) | Total (Bs) |
+            - La columna Total (Bs) debe ser la multiplicación del Total ($) por {tasa_cambio}.
+            - Al final suma los totales en ambas monedas.
+            - IMPORTANTE: Agrega nota legal: "Estimación Clase 5 (-50%/+100%). Valores referenciales sujetos a inflación local."
             """
 
         prompt = f"""
-        Rol: Inspector Senior {datos_ins['modulo']}. Norma: {datos_ins['norma']}.
+        Rol: Inspector Senior {datos_ins['modulo']} en VENEZUELA. Norma: {datos_ins['norma']}.
         Contexto Técnico: {datos_tec}
-        Tarea: Auditoría visual basada en {len(lista_imagenes_pil)} IMÁGENES proporcionadas.
-        Genera REPORTE TÉCNICO INTEGRAL:
-        1. HALLAZGOS VISUALES (Correlacionar imágenes).
-        2. ANÁLISIS NORMATIVO {datos_ins['norma']} (Cumplimiento General).
-        3. CAUSA RAÍZ PROBABLE.
-        4. RECOMENDACIÓN EJECUTIVA.
+        Tarea: Auditoría visual basada en {len(lista_imagenes_pil)} IMÁGENES.
+        Genera REPORTE TÉCNICO ESTRUCTURADO:
+        1. HALLAZGOS VISUALES (Severidad Alta/Media/Baja).
+        2. CUMPLIMIENTO {datos_ins['norma']} (Indicar artículos específicos).
+        3. CAUSA RAÍZ (Considerar ambiente tropical/costero si aplica).
+        4. RECOMENDACIÓN TÉCNICA (Paso a paso).
         {instruccion_costos}
-        Tono: Autoritario, técnico, sin saludos.
+        Tono: Profesional, directo, Gerencial.
         """
         try:
             model = genai.GenerativeModel(modelo)
@@ -125,7 +125,7 @@ class InspectorIndustrial:
         pdf.add_page()
         
         pdf.set_font('Arial', 'B', 16)
-        pdf.cell(0, 10, 'DICTAMEN TÉCNICO DE INSPECCIÓN', 0, 1, 'C')
+        pdf.cell(0, 10, 'DICTAMEN TÉCNICO VIG.IA', 0, 1, 'C')
         pdf.set_font('Arial', '', 10)
         pdf.cell(0, 6, f"Proyecto: {datos['proyecto']} | Norma: {datos['norma']}", 0, 1, 'C')
         pdf.cell(0, 6, f"Inspector: {datos['usuario']} | Fecha: {datetime.datetime.now().strftime('%d/%m/%Y')}", 0, 1, 'C')
@@ -133,11 +133,12 @@ class InspectorIndustrial:
         
         pdf.set_fill_color(50, 50, 50) 
         pdf.set_text_color(255, 255, 255) 
-        pdf.cell(0, 8, " RESULTADOS DEL ANÁLISIS VIG.IA", 1, 1, 'L', 1)
+        pdf.cell(0, 8, " RESULTADOS DE LA INSPECCIÓN", 1, 1, 'L', 1)
         pdf.set_text_color(0, 0, 0) 
         pdf.ln(5)
         
         pdf.set_font('Arial', '', 11)
+        # Limpieza de caracteres para evitar errores en PDF
         texto_limpio = texto_ia.replace('**', '').replace('##', '').replace('•', '-')
         texto_limpio = texto_limpio.encode('latin-1', 'replace').decode('latin-1')
         pdf.multi_cell(0, 6, texto_limpio)
@@ -146,7 +147,7 @@ class InspectorIndustrial:
             pdf.add_page()
             pdf.set_fill_color(255, 111, 0)
             pdf.set_text_color(255, 255, 255)
-            pdf.cell(0, 10, f" ANEXO FOTOGRÁFICO ({len(rutas_imagenes)} Evidencias)", 1, 1, 'C', 1)
+            pdf.cell(0, 10, f" EVIDENCIA FOTOGRÁFICA ({len(rutas_imagenes)})", 1, 1, 'C', 1)
             pdf.ln(10)
             
             for i, ruta in enumerate(rutas_imagenes):
@@ -162,14 +163,13 @@ class InspectorIndustrial:
         
         return pdf.output(dest='S').encode('latin-1')
 
-# --- 3. CLASE DE DISEÑO PDF ---
 class PDFReport(FPDF):
     def header(self):
         if os.path.exists("logo.png"):
             self.image("logo.png", 10, 8, 25)
         self.set_font('Arial', 'B', 12)
         self.cell(30) 
-        self.cell(0, 10, 'VIG.IA - INDUSTRIAL INTELLIGENCE', 0, 0, 'L')
+        self.cell(0, 10, 'SUNBELT SURPLUS - VIG.IA SYSTEM', 0, 0, 'L')
         self.set_draw_color(255, 111, 0)
         self.set_line_width(1)
         self.line(10, 28, 200, 28)
@@ -179,4 +179,4 @@ class PDFReport(FPDF):
         self.set_y(-15)
         self.set_font('Arial', 'I', 8)
         self.set_text_color(128)
-        self.cell(0, 10, f'Reporte generado por Sistema VIG.IA | Página {self.page_no()}', 0, 0, 'C')
+        self.cell(0, 10, f'Reporte generado por IA | Página {self.page_no()}', 0, 0, 'C')
