@@ -1,4 +1,4 @@
-# PROYECTO: VIG.IA - CEREBRO (VENEZUELA COSTING)
+# PROYECTO: VIG.IA - CEREBRO (EXPANDED MENU)
 # ARCHIVO: Nucleo_Vigia.py
 
 import google.generativeai as genai
@@ -50,12 +50,17 @@ class GestorDatos:
 class InspectorIndustrial:
     def __init__(self):
         self.db = GestorDatos()
+        # --- MENÚ EXPANDIDO TIPO "NAVAJA SUIZA" ---
         self.estructura_conocimiento = {
-            "MECÁNICO (Tanques/Recipientes)": ["API 653", "API 510", "API 570"],
-            "SOLDADURA Y ESTRUCTURA": ["ASME IX", "AWS D1.1", "API 1104"],
-            "CORROSIÓN Y PINTURA": ["NACE SP0188", "SSPC-PA2", "ISO 8501"],
-            "ELÉCTRICO Y POTENCIA": ["NFPA 70B", "NETA MTS", "IEEE 43"],
-            "SEGURIDAD (HSE)": ["OSHA 1910", "ISO 45001"]
+            "🔍 UNIVERSAL / MULTIPROPÓSITO": ["Buenas Prácticas de Ingeniería", "Criterio del Fabricante", "Estándar Visual General"],
+            "⚙️ MECÁNICO (Estático/Rotativo)": ["API 653 (Tanques)", "API 510 (Recipientes)", "API 570 (Tuberías)", "API 610 (Bombas)"],
+            "⚡ ELÉCTRICO Y POTENCIA": ["NFPA 70B (Mantenimiento)", "NETA MTS", "Código Eléctrico Nacional (CEN)", "IEEE 43"],
+            "🏗️ CIVIL E INFRAESTRUCTURA": ["ACI 318 (Concreto)", "AISC 360 (Estructuras Acero)", "Normas ISO Mantenimiento Edificios"],
+            "🔥 SOLDADURA Y MATERIALES": ["ASME IX", "AWS D1.1 (Estructural)", "API 1104 (Gasoductos)"],
+            "⚠️ SEGURIDAD (HSE/SISO)": ["OSHA 1910 (General Industry)", "ISO 45001", "Normas COVENIN (Venezuela)", "Matriz de Riesgos"],
+            "🎨 CORROSIÓN Y PINTURA": ["NACE SP0188", "SSPC-PA2", "ISO 8501 (Grados de Óxido)"],
+            "📟 INSTRUMENTACIÓN Y CONTROL": ["ISA 5.1", "API 554", "Manual de Fabricante"],
+            "🚚 FLOTA Y TRANSPORTE": ["Mantenimiento Automotriz", "Inspección de Maquinaria Pesada", "DOT Regulations"]
         }
 
     def obtener_modulos(self): return list(self.estructura_conocimiento.keys())
@@ -73,7 +78,6 @@ class InspectorIndustrial:
             return lista[0] if lista else None
         except: return None
 
-    # MODIFICADO: Ahora recibe 'tasa_cambio'
     def analizar_imagen_con_ia(self, api_key, rutas_imagenes, datos_ins, datos_tec, calcular_costos=False, tasa_cambio=1.0):
         genai.configure(api_key=api_key)
         modelo = self._encontrar_modelo_disponible()
@@ -90,26 +94,25 @@ class InspectorIndustrial:
         if calcular_costos:
             instruccion_costos = f"""
             5. ESTIMACIÓN DE COSTOS (MERCADO VENEZOLANO - CLASE 5):
-            - Tasa de Cambio Referencial: {tasa_cambio} Bs/USD.
-            - Considera sobrecostos logísticos de Venezuela, mano de obra local y repuestos importados.
-            - Genera una Tabla Markdown estricta con estas columnas:
-              | Partida / Acción | Cantidad | Unitario ($) | Total ($) | Total (Bs) |
-            - La columna Total (Bs) debe ser la multiplicación del Total ($) por {tasa_cambio}.
-            - Al final suma los totales en ambas monedas.
-            - IMPORTANTE: Agrega nota legal: "Estimación Clase 5 (-50%/+100%). Valores referenciales sujetos a inflación local."
+            - Tasa Referencial: {tasa_cambio} Bs/USD.
+            - Genera Tabla Markdown: | Partida | Cantidad | Unitario ($) | Total ($) | Total (Bs) |
+            - Sumar totales al final.
+            - Nota legal: "Estimación Clase 5 (-50%/+100%). Valores referenciales."
             """
 
         prompt = f"""
-        Rol: Inspector Senior {datos_ins['modulo']} en VENEZUELA. Norma: {datos_ins['norma']}.
-        Contexto Técnico: {datos_tec}
-        Tarea: Auditoría visual basada en {len(lista_imagenes_pil)} IMÁGENES.
-        Genera REPORTE TÉCNICO ESTRUCTURADO:
-        1. HALLAZGOS VISUALES (Severidad Alta/Media/Baja).
-        2. CUMPLIMIENTO {datos_ins['norma']} (Indicar artículos específicos).
-        3. CAUSA RAÍZ (Considerar ambiente tropical/costero si aplica).
-        4. RECOMENDACIÓN TÉCNICA (Paso a paso).
+        Rol: Inspector Experto en {datos_ins['modulo']}. Norma/Criterio: {datos_ins['norma']}.
+        Contexto Específico: {datos_tec}
+        Tarea: Auditoría técnica visual de {len(lista_imagenes_pil)} imágenes.
+        Si es modo UNIVERSAL, usa criterio de ingeniería general y sentido común técnico.
+        
+        REPORTE TÉCNICO:
+        1. HALLAZGOS (Descripción detallada de fallas, daños o condiciones).
+        2. ANÁLISIS TÉCNICO/NORMATIVO (¿Cumple o No Cumple? ¿Por qué?).
+        3. CAUSA RAÍZ (Desgaste, falta de mantenimiento, ambiente, operación, etc.).
+        4. RECOMENDACIONES (Plan de acción correctivo inmediato).
         {instruccion_costos}
-        Tono: Profesional, directo, Gerencial.
+        Tono: Profesional, técnico y directo.
         """
         try:
             model = genai.GenerativeModel(modelo)
@@ -127,7 +130,8 @@ class InspectorIndustrial:
         pdf.set_font('Arial', 'B', 16)
         pdf.cell(0, 10, 'DICTAMEN TÉCNICO VIG.IA', 0, 1, 'C')
         pdf.set_font('Arial', '', 10)
-        pdf.cell(0, 6, f"Proyecto: {datos['proyecto']} | Norma: {datos['norma']}", 0, 1, 'C')
+        pdf.cell(0, 6, f"Especialidad: {datos['modulo']}", 0, 1, 'C')
+        pdf.cell(0, 6, f"Norma/Criterio: {datos['norma']}", 0, 1, 'C')
         pdf.cell(0, 6, f"Inspector: {datos['usuario']} | Fecha: {datetime.datetime.now().strftime('%d/%m/%Y')}", 0, 1, 'C')
         pdf.ln(10)
         
@@ -138,7 +142,6 @@ class InspectorIndustrial:
         pdf.ln(5)
         
         pdf.set_font('Arial', '', 11)
-        # Limpieza de caracteres para evitar errores en PDF
         texto_limpio = texto_ia.replace('**', '').replace('##', '').replace('•', '-')
         texto_limpio = texto_limpio.encode('latin-1', 'replace').decode('latin-1')
         pdf.multi_cell(0, 6, texto_limpio)
