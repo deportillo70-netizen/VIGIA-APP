@@ -1,6 +1,6 @@
 # PROYECTO: VIG.IA - SISTEMA DE INTELIGENCIA INDUSTRIAL
 # ARCHIVO: vigia.py
-# VERSIÓN: 1.6 (SUPER MENU UNIVERSAL)
+# VERSIÓN: 1.7 (INTERNATIONAL EDITION)
 
 import streamlit as st
 import tempfile
@@ -13,7 +13,7 @@ from Nucleo_Vigia import InspectorIndustrial
 CLAVE_MAESTRA = "admin123" 
 # --------------------------------
 
-st.set_page_config(page_title="VIG.IA | Universal", page_icon="🇻🇪", layout="wide")
+st.set_page_config(page_title="VIG.IA | International", page_icon="🌎", layout="wide")
 
 st.markdown("""
     <style>
@@ -69,13 +69,13 @@ def check_password():
 
     col_spacer1, col_login, col_spacer2 = st.columns([1, 2, 1])
     with col_login:
-        st.markdown("<br><h1 style='text-align: center; color: #333;'>🇻🇪 VIG.IA</h1>", unsafe_allow_html=True)
-        st.markdown("<h4 style='text-align: center; color: #666;'>UNIVERSAL INTELLIGENCE</h4>", unsafe_allow_html=True)
+        st.markdown("<br><h1 style='text-align: center; color: #333;'>🌎 VIG.IA</h1>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; color: #666;'>INTERNATIONAL INTELLIGENCE</h4>", unsafe_allow_html=True)
         st.markdown("---")
-        pwd = st.text_input("Credencial de Acceso:", type="password")
+        pwd = st.text_input("Credencial / Access Key:", type="password")
         
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("INGRESAR AL SISTEMA", use_container_width=True):
+        if st.button("ENTER SYSTEM / INGRESAR", use_container_width=True):
             if CLAVE_MAESTRA and pwd == CLAVE_MAESTRA:
                 st.session_state["password_correct"] = True
                 st.rerun()
@@ -83,10 +83,10 @@ def check_password():
                 if pwd == st.secrets["APP_PASSWORD"]:
                     st.session_state["password_correct"] = True
                     st.rerun()
-                else: st.error("⛔ CREDENCIAL INVÁLIDA")
+                else: st.error("⛔ INVALID CREDENTIAL")
             except:
-                st.warning("⚠️ MODO LOCAL")
-                st.info(f"Clave Maestra: {CLAVE_MAESTRA}")
+                st.warning("⚠️ LOCAL MODE")
+                st.info(f"Master Key: {CLAVE_MAESTRA}")
     return False
 
 if not check_password(): st.stop()
@@ -102,8 +102,8 @@ except: API_KEY_NUBE = ""
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("# 🇻🇪 VIG.IA")
-    st.markdown("**Versión 1.6 (Universal)**")
+    st.markdown("# 🌎 VIG.IA")
+    st.markdown("**Versión 1.7 (Intl)**")
     st.markdown("---")
     
     if CLAVE_MAESTRA:
@@ -120,7 +120,11 @@ with st.sidebar:
         api_key = st.text_input("🔑 API Key:", type="password")
 
     st.markdown("---")
-    st.markdown("### 💰 Tasa de Cambio")
+    # --- SELECTOR DE IDIOMA ---
+    idioma = st.radio("Idioma / Language:", ["Español", "English"], horizontal=True)
+    
+    st.markdown("---")
+    st.markdown("### 💰 Tasa / Rate")
     
     if 'tasa_actual' not in st.session_state:
         st.session_state['tasa_actual'] = obtener_tasa_dia()
@@ -132,71 +136,72 @@ with st.sidebar:
         st.rerun()
     
     st.markdown("---")
-    st.markdown("### 👷‍♂️ Datos Proyecto")
+    st.markdown("### 👷‍♂️ Project Data")
     usuario = st.text_input("Inspector:", "Gerente Angel Portillo")
-    proyecto = st.text_input("Tag / Activo:", "Inspección General")
-    activar_costos = st.checkbox("Estimar Costos (Bs/$)", value=True)
+    proyecto = st.text_input("Tag / Asset:", "General Inspection")
+    activar_costos = st.checkbox("Cost Estimating (Bs/$)", value=True)
 
 # --- TABS ---
-tab1, tab2 = st.tabs(["🕵️ CAMPO", "📜 MEMORIA"])
+label_tab1 = "🕵️ CAMPO (FIELD)"
+label_tab2 = "📜 MEMORIA (LOGS)"
+tab1, tab2 = st.tabs([label_tab1, label_tab2])
 
 with tab1:
-    st.subheader("1. Evidencia Visual")
-    archivo_camara = st.camera_input("📸 FOTO AHORA", label_visibility="visible")
-    archivos_galeria = st.file_uploader("📂 GALERÍA (Máx 10)", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+    st.subheader("1. Evidencia Visual / Visual Evidence")
+    archivo_camara = st.camera_input("📸 CAMERA", label_visibility="visible")
+    archivos_galeria = st.file_uploader("📂 GALLERY (Max 10)", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
     
     lista_imagenes = []
     if archivo_camara: lista_imagenes.append(archivo_camara)
     elif archivos_galeria: lista_imagenes = archivos_galeria
 
     if lista_imagenes:
-        st.success(f"✅ {len(lista_imagenes)} Capturas listas")
-        with st.expander("👁️ Ver capturas"):
+        st.success(f"✅ {len(lista_imagenes)}imgs Ready")
+        with st.expander("👁️ Preview"):
             cols = st.columns(3)
             for i, img in enumerate(lista_imagenes):
                 cols[i % 3].image(img, use_container_width=True)
 
     st.markdown("---")
-    st.subheader("2. Datos Técnicos")
+    st.subheader("2. Datos Técnicos / Technical Data")
     
-    # MENÚ DINÁMICO DESDE EL CEREBRO
-    modulo = st.selectbox("Especialidad:", inspector.obtener_modulos())
-    norma = st.selectbox("Norma / Criterio:", inspector.obtener_normas(modulo))
+    modulo = st.selectbox("Especialidad / Specialty:", inspector.obtener_modulos())
+    norma = st.selectbox("Norma / Standard:", inspector.obtener_normas(modulo))
     
-    # FORMULARIOS INTELIGENTES
     datos_tecnicos = ""
     
     if "MECÁNICO" in modulo:
         c1, c2 = st.columns(2)
-        diametro = c1.number_input("Diám (m):", 0.0, 100.0, 15.0)
-        altura = c2.number_input("Alt (m):", 0.0, 50.0, 8.0)
-        material = c1.text_input("Material:", "Acero ASTM A36")
-        fluido = c2.text_input("Fluido:", "Crudo")
-        datos_tecnicos = f"Equipo Estático. Dimensiones: {diametro}x{altura}m. Material: {material}. Fluido: {fluido}."
+        diametro = c1.number_input("Diameter (m):", 0.0, 100.0, 15.0)
+        altura = c2.number_input("Height (m):", 0.0, 50.0, 8.0)
+        material = c1.text_input("Material:", "Carbon Steel")
+        fluido = c2.text_input("Fluid:", "Crude Oil")
+        datos_tecnicos = f"Static Equipment. Dim: {diametro}x{altura}m. Mat: {material}. Fluid: {fluido}."
         
     elif "ELÉCTRICO" in modulo:
         c1, c2 = st.columns(2)
-        voltaje = c1.selectbox("Voltaje:", ["110/220V", "440V", "13.8kV", "115kV"])
-        equipo = c2.text_input("Equipo:", "Transformador/Tablero")
-        datos_tecnicos = f"Equipo Eléctrico: {equipo}. Tensión: {voltaje}."
+        voltaje = c1.selectbox("Voltage:", ["110/220V", "440V", "13.8kV", "115kV"])
+        equipo = c2.text_input("Equipment:", "Transformer/Panel")
+        datos_tecnicos = f"Electrical Eq: {equipo}. Voltage: {voltaje}."
         
     elif "SOLDADURA" in modulo:
-        proceso = st.selectbox("Proceso:", ["SMAW", "GTAW", "GMAW", "FCAW"])
-        posicion = st.selectbox("Posición:", ["1G", "2G", "3G", "4G", "6G"])
-        datos_tecnicos = f"Inspección Soldadura. Proceso: {proceso}. Posición: {posicion}."
+        proceso = st.selectbox("Process:", ["SMAW", "GTAW", "GMAW", "FCAW"])
+        posicion = st.selectbox("Position:", ["1G", "2G", "3G", "4G", "6G"])
+        datos_tecnicos = f"Welding Insp. Process: {proceso}. Pos: {posicion}."
         
     else:
-        # ESTE ES EL CAMPO MÁGICO PARA "UNIVERSAL", "CIVIL", "SEGURIDAD", ETC.
-        st.info(f"📝 Modo: {modulo}. Describa lo que ve para ayudar a la IA.")
-        datos_tecnicos = st.text_area("Contexto / Observaciones:", height=100, placeholder="Ej: Pared con manchas de humedad, Vehículo con faro roto, Personal sin casco...")
+        st.info(f"📝 Mode: {modulo}. Describe context.")
+        datos_tecnicos = st.text_area("Context / Observations:", height=100, placeholder="Description of the issue...")
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    if st.button("🚀 INICIAR ANÁLISIS UNIVERSAL", use_container_width=True):
+    label_btn = "🚀 GENERATE REPORT" if idioma == "English" else "🚀 GENERAR REPORTE"
+    
+    if st.button(label_btn, use_container_width=True):
         if not api_key: st.error("⛔ Falta API Key.")
-        elif not lista_imagenes: st.error("⚠️ Falta Evidencia.")
+        elif not lista_imagenes: st.error("⚠️ No Images.")
         else:
-            with st.spinner(f"⚡ Analizando con Criterio: {modulo}..."):
+            with st.spinner(f"⚡ Analizando ({idioma})..."):
                 rutas_temporales = []
                 for img_file in lista_imagenes:
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
@@ -205,37 +210,41 @@ with tab1:
                 
                 info = {"usuario": usuario, "proyecto": proyecto, "modulo": modulo, "norma": norma}
                 
-                resultado = inspector.analizar_imagen_con_ia(api_key, rutas_temporales, info, datos_tecnicos, activar_costos, tasa_usuario)
+                # PASAMOS EL IDIOMA AL CEREBRO
+                resultado = inspector.analizar_imagen_con_ia(api_key, rutas_temporales, info, datos_tecnicos, activar_costos, tasa_usuario, idioma)
                 
                 st.session_state['res_web'] = resultado
                 st.session_state['imgs_web'] = rutas_temporales
                 st.session_state['info_web'] = info
+                st.session_state['idioma_web'] = idioma # Guardamos idioma para el PDF
             st.balloons()
-            st.success("✅ REPORTE GENERADO")
+            st.success("✅ OK")
 
     if 'res_web' in st.session_state:
-        st.markdown("### 📋 Dictamen Técnico")
+        st.markdown("### 📋 Report")
         st.write(st.session_state['res_web'])
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("📄 DESCARGAR PDF", use_container_width=True):
-            pdf = inspector.generar_pdf_ia(st.session_state['info_web'], st.session_state['res_web'], st.session_state['imgs_web'])
-            st.download_button("Guardar PDF", pdf, "Reporte_VIGIA_VE.pdf", "application/pdf", use_container_width=True)
+        if st.button("📄 DOWNLOAD PDF", use_container_width=True):
+            # Recuperamos el idioma guardado o usamos el actual
+            lang_pdf = st.session_state.get('idioma_web', "Español")
+            pdf = inspector.generar_pdf_ia(st.session_state['info_web'], st.session_state['res_web'], st.session_state['imgs_web'], lang_pdf)
+            st.download_button("Save PDF", pdf, "VIGIA_Report.pdf", "application/pdf", use_container_width=True)
 
 with tab2:
     col_head, col_trash = st.columns([3, 1])
-    with col_head: st.header("Historial")
+    with col_head: st.header("History")
     with col_trash:
         if st.button("🗑️"):
             inspector.borrar_memoria()
-            st.toast("Memoria borrada")
+            st.toast("Deleted")
             time.sleep(1)
             st.rerun()
-    if st.button("🔄 Refrescar"): st.rerun()
+    if st.button("🔄 Refresh"): st.rerun()
     historial = inspector.obtener_historial()
     if historial:
         for fila in historial:
             with st.expander(f"📅 {fila[0]} | {fila[1]}"):
-                st.markdown(f"**Especialidad:** {fila[2]}")
-                st.caption("Resumen:")
+                st.markdown(f"**Spec:** {fila[2]}")
+                st.caption("Summary:")
                 st.markdown(fila[4][:200] + "...")
-    else: st.info("Sin registros.")
+    else: st.info("Empty.")
