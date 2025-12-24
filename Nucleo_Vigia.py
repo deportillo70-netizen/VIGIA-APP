@@ -1,4 +1,4 @@
-# PROYECTO: VIG.IA - CEREBRO (EXPANDED MENU)
+# PROYECTO: VIG.IA - CEREBRO (FINAL v1.7 BILINGÜE)
 # ARCHIVO: Nucleo_Vigia.py
 
 import google.generativeai as genai
@@ -50,17 +50,16 @@ class GestorDatos:
 class InspectorIndustrial:
     def __init__(self):
         self.db = GestorDatos()
-        # --- MENÚ EXPANDIDO TIPO "NAVAJA SUIZA" ---
         self.estructura_conocimiento = {
-            "🔍 UNIVERSAL / MULTIPROPÓSITO": ["Buenas Prácticas de Ingeniería", "Criterio del Fabricante", "Estándar Visual General"],
-            "⚙️ MECÁNICO (Estático/Rotativo)": ["API 653 (Tanques)", "API 510 (Recipientes)", "API 570 (Tuberías)", "API 610 (Bombas)"],
-            "⚡ ELÉCTRICO Y POTENCIA": ["NFPA 70B (Mantenimiento)", "NETA MTS", "Código Eléctrico Nacional (CEN)", "IEEE 43"],
-            "🏗️ CIVIL E INFRAESTRUCTURA": ["ACI 318 (Concreto)", "AISC 360 (Estructuras Acero)", "Normas ISO Mantenimiento Edificios"],
-            "🔥 SOLDADURA Y MATERIALES": ["ASME IX", "AWS D1.1 (Estructural)", "API 1104 (Gasoductos)"],
-            "⚠️ SEGURIDAD (HSE/SISO)": ["OSHA 1910 (General Industry)", "ISO 45001", "Normas COVENIN (Venezuela)", "Matriz de Riesgos"],
-            "🎨 CORROSIÓN Y PINTURA": ["NACE SP0188", "SSPC-PA2", "ISO 8501 (Grados de Óxido)"],
-            "📟 INSTRUMENTACIÓN Y CONTROL": ["ISA 5.1", "API 554", "Manual de Fabricante"],
-            "🚚 FLOTA Y TRANSPORTE": ["Mantenimiento Automotriz", "Inspección de Maquinaria Pesada", "DOT Regulations"]
+            "🔍 UNIVERSAL / MULTIPROPÓSITO": ["Engineering Best Practices", "OEM Criteria", "Visual Standard"],
+            "⚙️ MECÁNICO (Estático/Rotativo)": ["API 653 (Tanks)", "API 510 (Vessels)", "API 570 (Piping)", "API 610 (Pumps)"],
+            "⚡ ELÉCTRICO Y POTENCIA": ["NFPA 70B", "NETA MTS", "NEC (National Electric Code)", "IEEE 43"],
+            "🏗️ CIVIL E INFRAESTRUCTURA": ["ACI 318 (Concrete)", "AISC 360 (Steel)", "ISO Facilities Maint"],
+            "🔥 SOLDADURA Y MATERIALES": ["ASME IX", "AWS D1.1", "API 1104"],
+            "⚠️ SEGURIDAD (HSE/SISO)": ["OSHA 1910", "ISO 45001", "Risk Matrix"],
+            "🎨 CORROSIÓN Y PINTURA": ["NACE SP0188", "SSPC-PA2", "ISO 8501"],
+            "📟 INSTRUMENTACIÓN Y CONTROL": ["ISA 5.1", "API 554", "OEM Manual"],
+            "🚚 FLOTA Y TRANSPORTE": ["Automotive Maintenance", "Heavy Machinery Insp", "DOT Regulations"]
         }
 
     def obtener_modulos(self): return list(self.estructura_conocimiento.keys())
@@ -78,7 +77,8 @@ class InspectorIndustrial:
             return lista[0] if lista else None
         except: return None
 
-    def analizar_imagen_con_ia(self, api_key, rutas_imagenes, datos_ins, datos_tec, calcular_costos=False, tasa_cambio=1.0):
+    # ESTA ES LA CLAVE: AHORA ACEPTA "idioma"
+    def analizar_imagen_con_ia(self, api_key, rutas_imagenes, datos_ins, datos_tec, calcular_costos=False, tasa_cambio=1.0, idioma="Español"):
         genai.configure(api_key=api_key)
         modelo = self._encontrar_modelo_disponible()
         if not modelo: return "ERROR: No hay modelos IA disponibles."
@@ -88,32 +88,60 @@ class InspectorIndustrial:
             for ruta in rutas_imagenes:
                 img = PIL.Image.open(ruta)
                 lista_imagenes_pil.append(img)
-        except: return "Error al abrir alguna de las imágenes."
+        except: return "Error al abrir imágenes."
 
-        instruccion_costos = ""
-        if calcular_costos:
-            instruccion_costos = f"""
-            5. ESTIMACIÓN DE COSTOS (MERCADO VENEZOLANO - CLASE 5):
-            - Tasa Referencial: {tasa_cambio} Bs/USD.
-            - Genera Tabla Markdown: | Partida | Cantidad | Unitario ($) | Total ($) | Total (Bs) |
-            - Sumar totales al final.
-            - Nota legal: "Estimación Clase 5 (-50%/+100%). Valores referenciales."
+        # LOGICA BILINGÜE
+        if idioma == "English":
+            instruccion_costos = ""
+            if calcular_costos:
+                instruccion_costos = f"""
+                5. COST ESTIMATION (VENEZUELA MARKET - CLASS 5):
+                - Ref Rate: {tasa_cambio} Bs/USD.
+                - Generate Markdown Table: | Item | Qty | Unit ($) | Total ($) | Total (Bs) |
+                - Calculate Total (Bs) = Total ($) * {tasa_cambio}.
+                - Add disclaimer: "Class 5 Estimate (-50%/+100%). Reference values subject to local inflation."
+                """
+
+            prompt = f"""
+            Role: Senior Industrial Inspector. Specialty: {datos_ins['modulo']}. Standard: {datos_ins['norma']}.
+            Context: {datos_tec}
+            Task: Visual audit of {len(lista_imagenes_pil)} images.
+            OUTPUT LANGUAGE: ENGLISH.
+            
+            TECHNICAL REPORT STRUCTURE:
+            1. FINDINGS (Detailed description of failures/conditions).
+            2. COMPLIANCE ANALYSIS (Compliant/Non-Compliant with {datos_ins['norma']}).
+            3. ROOT CAUSE (Technical origin of the issue).
+            4. RECOMMENDATIONS (Action plan).
+            {instruccion_costos}
+            Tone: Professional, Technical, Executive.
+            """
+        else:
+            instruccion_costos = ""
+            if calcular_costos:
+                instruccion_costos = f"""
+                5. ESTIMACIÓN DE COSTOS (MERCADO VENEZOLANO - CLASE 5):
+                - Tasa Referencial: {tasa_cambio} Bs/USD.
+                - Tabla Markdown: | Partida | Cantidad | Unitario ($) | Total ($) | Total (Bs) |
+                - Total (Bs) = Total ($) * {tasa_cambio}.
+                - Nota legal: "Estimación Clase 5 (-50%/+100%). Valores referenciales."
+                """
+
+            prompt = f"""
+            Rol: Inspector Experto en {datos_ins['modulo']}. Norma: {datos_ins['norma']}.
+            Contexto: {datos_tec}
+            Tarea: Auditoría visual de {len(lista_imagenes_pil)} imágenes.
+            IDIOMA DE SALIDA: ESPAÑOL.
+            
+            REPORTE TÉCNICO:
+            1. HALLAZGOS (Descripción detallada).
+            2. ANÁLISIS NORMATIVO (¿Cumple/No Cumple? Criterio: {datos_ins['norma']}).
+            3. CAUSA RAÍZ.
+            4. RECOMENDACIONES.
+            {instruccion_costos}
+            Tono: Profesional, técnico y directo.
             """
 
-        prompt = f"""
-        Rol: Inspector Experto en {datos_ins['modulo']}. Norma/Criterio: {datos_ins['norma']}.
-        Contexto Específico: {datos_tec}
-        Tarea: Auditoría técnica visual de {len(lista_imagenes_pil)} imágenes.
-        Si es modo UNIVERSAL, usa criterio de ingeniería general y sentido común técnico.
-        
-        REPORTE TÉCNICO:
-        1. HALLAZGOS (Descripción detallada de fallas, daños o condiciones).
-        2. ANÁLISIS TÉCNICO/NORMATIVO (¿Cumple o No Cumple? ¿Por qué?).
-        3. CAUSA RAÍZ (Desgaste, falta de mantenimiento, ambiente, operación, etc.).
-        4. RECOMENDACIONES (Plan de acción correctivo inmediato).
-        {instruccion_costos}
-        Tono: Profesional, técnico y directo.
-        """
         try:
             model = genai.GenerativeModel(modelo)
             response = model.generate_content([prompt] + lista_imagenes_pil)
@@ -122,22 +150,30 @@ class InspectorIndustrial:
             return text
         except Exception as e: return f"Error IA: {str(e)}"
 
-    def generar_pdf_ia(self, datos, texto_ia, rutas_imagenes):
+    def generar_pdf_ia(self, datos, texto_ia, rutas_imagenes, idioma="Español"):
         pdf = PDFReport()
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
         
+        t_titulo = 'DICTAMEN TÉCNICO VIG.IA' if idioma == "Español" else 'VIG.IA TECHNICAL REPORT'
+        t_especialidad = 'Especialidad:' if idioma == "Español" else 'Specialty:'
+        t_norma = 'Norma/Criterio:' if idioma == "Español" else 'Standard:'
+        t_inspector = 'Inspector:' if idioma == "Español" else 'Inspector:'
+        t_fecha = 'Fecha:' if idioma == "Español" else 'Date:'
+        t_resultados = ' RESULTADOS' if idioma == "Español" else ' RESULTS'
+        t_evidencia = ' EVIDENCIA FOTOGRÁFICA' if idioma == "Español" else ' PHOTOGRAPHIC EVIDENCE'
+        
         pdf.set_font('Arial', 'B', 16)
-        pdf.cell(0, 10, 'DICTAMEN TÉCNICO VIG.IA', 0, 1, 'C')
+        pdf.cell(0, 10, t_titulo, 0, 1, 'C')
         pdf.set_font('Arial', '', 10)
-        pdf.cell(0, 6, f"Especialidad: {datos['modulo']}", 0, 1, 'C')
-        pdf.cell(0, 6, f"Norma/Criterio: {datos['norma']}", 0, 1, 'C')
-        pdf.cell(0, 6, f"Inspector: {datos['usuario']} | Fecha: {datetime.datetime.now().strftime('%d/%m/%Y')}", 0, 1, 'C')
+        pdf.cell(0, 6, f"{t_especialidad} {datos['modulo']}", 0, 1, 'C')
+        pdf.cell(0, 6, f"{t_norma} {datos['norma']}", 0, 1, 'C')
+        pdf.cell(0, 6, f"{t_inspector} {datos['usuario']} | {t_fecha} {datetime.datetime.now().strftime('%d/%m/%Y')}", 0, 1, 'C')
         pdf.ln(10)
         
         pdf.set_fill_color(50, 50, 50) 
         pdf.set_text_color(255, 255, 255) 
-        pdf.cell(0, 8, " RESULTADOS DE LA INSPECCIÓN", 1, 1, 'L', 1)
+        pdf.cell(0, 8, t_resultados, 1, 1, 'L', 1)
         pdf.set_text_color(0, 0, 0) 
         pdf.ln(5)
         
@@ -150,7 +186,7 @@ class InspectorIndustrial:
             pdf.add_page()
             pdf.set_fill_color(255, 111, 0)
             pdf.set_text_color(255, 255, 255)
-            pdf.cell(0, 10, f" EVIDENCIA FOTOGRÁFICA ({len(rutas_imagenes)})", 1, 1, 'C', 1)
+            pdf.cell(0, 10, f"{t_evidencia} ({len(rutas_imagenes)})", 1, 1, 'C', 1)
             pdf.ln(10)
             
             for i, ruta in enumerate(rutas_imagenes):
@@ -160,7 +196,7 @@ class InspectorIndustrial:
                         pdf.ln(5)
                         pdf.set_text_color(0, 0, 0)
                         pdf.set_font('Arial', 'I', 9)
-                        pdf.cell(0, 5, f"Evidencia #{i+1}", 0, 1, 'C')
+                        pdf.cell(0, 5, f"Img #{i+1}", 0, 1, 'C')
                         pdf.ln(10)
                     except: pass
         
@@ -182,4 +218,4 @@ class PDFReport(FPDF):
         self.set_y(-15)
         self.set_font('Arial', 'I', 8)
         self.set_text_color(128)
-        self.cell(0, 10, f'Reporte generado por IA | Página {self.page_no()}', 0, 0, 'C')
+        self.cell(0, 10, f'VIG.IA Report | Page {self.page_no()}', 0, 0, 'C')
