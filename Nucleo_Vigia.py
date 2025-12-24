@@ -1,4 +1,4 @@
-# PROYECTO: VIG.IA - CEREBRO (PDF FIX v1.8)
+# PROYECTO: VIG.IA - CEREBRO (v1.9: ANTI-CRASH + RETRY SYSTEM)
 # ARCHIVO: Nucleo_Vigia.py
 
 import google.generativeai as genai
@@ -7,6 +7,7 @@ import PIL.Image
 import datetime
 import os
 import sqlite3
+import time  # Importante para la espera automática
 
 # --- GESTOR DE BASE DE DATOS ---
 class GestorDatos:
@@ -52,7 +53,6 @@ class GestorDatos:
 class InspectorIndustrial:
     def __init__(self):
         self.db = GestorDatos()
-        # Mantenemos los emojis para la App, pero los limpiaremos para el PDF
         self.estructura_conocimiento = {
             "🔍 UNIVERSAL / MULTIPROPÓSITO": ["Engineering Best Practices", "OEM Criteria", "Visual Standard"],
             "⚙️ MECÁNICO (Estático/Rotativo)": ["API 653 (Tanks)", "API 510 (Vessels)", "API 570 (Piping)", "API 610 (Pumps)"],
@@ -82,17 +82,17 @@ class InspectorIndustrial:
 
     def analizar_imagen_con_ia(self, api_key, rutas_imagenes, datos_ins, datos_tec, calcular_costos=False, tasa_cambio=1.0, idioma="Español"):
         genai.configure(api_key=api_key)
-        modelo = self._encontrar_modelo_disponible()
-        if not modelo: return "ERROR: No hay modelos IA disponibles."
+        modelo_nombre = self._encontrar_modelo_disponible()
+        if not modelo_nombre: return "ERROR CRÍTICO: No hay conexión con la IA de Google."
 
         lista_imagenes_pil = []
         try:
             for ruta in rutas_imagenes:
                 img = PIL.Image.open(ruta)
                 lista_imagenes_pil.append(img)
-        except: return "Error al abrir imágenes."
+        except: return "Error: No se pudieron leer las imágenes."
 
-        # LOGICA BILINGÜE
+        # Construcción del Prompt (Igual que antes)
         if idioma == "English":
             instruccion_costos = ""
             if calcular_costos:
@@ -140,28 +140,46 @@ class InspectorIndustrial:
             Tono: Profesional, técnico y directo.
             """
 
-        try:
-            model = genai.GenerativeModel(modelo)
-            response = model.generate_content([prompt] + lista_imagenes_pil)
-            text = response.text
-            self.db.guardar_inspeccion(datos_ins['proyecto'], datos_ins['usuario'], datos_ins['modulo'], datos_ins['norma'], text)
-            return text
-        except Exception as e: return f"Error IA: {str(e)}"
+        # --- SISTEMA DE REINTENTOS AUTOMÁTICOS (ANTI-429) ---
+        model = genai.GenerativeModel(modelo_nombre)
+        intentos_maximos = 3
+        
+        for intento in range(intentos_maximos):
+            try:
+                # Intentamos generar el contenido
+                response = model.generate_content([prompt] + lista_imagenes_pil)
+                text = response.text
+                # Si tenemos éxito, guardamos y salimos
+                self.db.guardar_inspeccion(datos_ins['proyecto'], datos_ins['usuario'], datos_ins['modulo'], datos_ins['norma'], text)
+                return text
+            
+            except Exception as e:
+                mensaje_error = str(e)
+                # Si el error es de "Quota" (429), esperamos y reintentamos
+                if "429" in mensaje_error or "quota" in mensaje_error.lower():
+                    if intento < intentos_maximos - 1:
+                        time.sleep(10) # Espera 10 segundos antes de reintentar
+                        continue # Vuelve al inicio del bucle
+                    else:
+                        return "⚠️ SERVIDOR OCUPADO: Alta demanda de análisis. Por favor, espere 1 minuto y vuelva a intentar. (Error 429)"
+                else:
+                    # Si es otro error, lo mostramos de una vez
+                    return f"Error Técnico: {mensaje_error}"
 
-    # --- FUNCIÓN CORREGIDA PARA PDF ---
+        return "Error desconocido al contactar IA."
+
+    # --- GENERADOR PDF BLINDADO (SIN EMOJIS) ---
     def generar_pdf_ia(self, datos, texto_ia, rutas_imagenes, idioma="Español"):
         
-        # Función auxiliar para eliminar emojis y caracteres raros
         def limpiar(texto):
             if not texto: return ""
-            # Convierte a latin-1 ignorando errores (borra emojis) y regresa a string
+            # Elimina emojis y caracteres raros para que FPDF no falle
             return str(texto).encode('latin-1', 'ignore').decode('latin-1')
 
         pdf = PDFReport()
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
         
-        # Textos según idioma
         t_titulo = 'DICTAMEN TECNICO VIG.IA' if idioma == "Español" else 'VIG.IA TECHNICAL REPORT'
         t_especialidad = 'Especialidad:' if idioma == "Español" else 'Specialty:'
         t_norma = 'Norma/Criterio:' if idioma == "Español" else 'Standard:'
@@ -171,11 +189,9 @@ class InspectorIndustrial:
         t_evidencia = ' EVIDENCIA FOTOGRAFICA' if idioma == "Español" else ' PHOTOGRAPHIC EVIDENCE'
         
         pdf.set_font('Arial', 'B', 16)
-        # Limpiamos todo lo que entra al PDF
         pdf.cell(0, 10, t_titulo, 0, 1, 'C')
         pdf.set_font('Arial', '', 10)
         
-        # AQUI ESTABA EL ERROR: Limpiamos los datos del diccionario que traen emojis
         pdf.cell(0, 6, f"{t_especialidad} {limpiar(datos['modulo'])}", 0, 1, 'C')
         pdf.cell(0, 6, f"{t_norma} {limpiar(datos['norma'])}", 0, 1, 'C')
         pdf.cell(0, 6, f"{t_inspector} {limpiar(datos['usuario'])} | {t_fecha} {datetime.datetime.now().strftime('%d/%m/%Y')}", 0, 1, 'C')
@@ -188,10 +204,8 @@ class InspectorIndustrial:
         pdf.ln(5)
         
         pdf.set_font('Arial', '', 11)
-        # Limpieza profunda del texto de la IA
         texto_limpio = texto_ia.replace('**', '').replace('##', '').replace('•', '-')
         texto_limpio = limpiar(texto_limpio)
-        
         pdf.multi_cell(0, 6, texto_limpio)
         
         if rutas_imagenes:
@@ -200,7 +214,6 @@ class InspectorIndustrial:
             pdf.set_text_color(255, 255, 255)
             pdf.cell(0, 10, f"{t_evidencia} ({len(rutas_imagenes)})", 1, 1, 'C', 1)
             pdf.ln(10)
-            
             for i, ruta in enumerate(rutas_imagenes):
                 if os.path.exists(ruta):
                     try:
@@ -212,7 +225,6 @@ class InspectorIndustrial:
                         pdf.ln(10)
                     except: pass
         
-        # Generar salida segura
         return pdf.output(dest='S').encode('latin-1')
 
 # --- CLASE PDF ---
