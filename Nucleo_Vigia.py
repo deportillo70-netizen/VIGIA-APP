@@ -1,4 +1,4 @@
-# PROYECTO: VIG.IA - CEREBRO (FINAL v1.7 BILINGÜE)
+# PROYECTO: VIG.IA - CEREBRO (PDF FIX v1.8)
 # ARCHIVO: Nucleo_Vigia.py
 
 import google.generativeai as genai
@@ -8,6 +8,7 @@ import datetime
 import os
 import sqlite3
 
+# --- GESTOR DE BASE DE DATOS ---
 class GestorDatos:
     def __init__(self, db_name="historial_vigia.db"):
         self.db_name = db_name
@@ -47,9 +48,11 @@ class GestorDatos:
         conn.commit()
         conn.close()
 
+# --- CEREBRO PRINCIPAL ---
 class InspectorIndustrial:
     def __init__(self):
         self.db = GestorDatos()
+        # Mantenemos los emojis para la App, pero los limpiaremos para el PDF
         self.estructura_conocimiento = {
             "🔍 UNIVERSAL / MULTIPROPÓSITO": ["Engineering Best Practices", "OEM Criteria", "Visual Standard"],
             "⚙️ MECÁNICO (Estático/Rotativo)": ["API 653 (Tanks)", "API 510 (Vessels)", "API 570 (Piping)", "API 610 (Pumps)"],
@@ -77,7 +80,6 @@ class InspectorIndustrial:
             return lista[0] if lista else None
         except: return None
 
-    # ESTA ES LA CLAVE: AHORA ACEPTA "idioma"
     def analizar_imagen_con_ia(self, api_key, rutas_imagenes, datos_ins, datos_tec, calcular_costos=False, tasa_cambio=1.0, idioma="Español"):
         genai.configure(api_key=api_key)
         modelo = self._encontrar_modelo_disponible()
@@ -101,18 +103,16 @@ class InspectorIndustrial:
                 - Calculate Total (Bs) = Total ($) * {tasa_cambio}.
                 - Add disclaimer: "Class 5 Estimate (-50%/+100%). Reference values subject to local inflation."
                 """
-
             prompt = f"""
             Role: Senior Industrial Inspector. Specialty: {datos_ins['modulo']}. Standard: {datos_ins['norma']}.
             Context: {datos_tec}
             Task: Visual audit of {len(lista_imagenes_pil)} images.
             OUTPUT LANGUAGE: ENGLISH.
-            
             TECHNICAL REPORT STRUCTURE:
-            1. FINDINGS (Detailed description of failures/conditions).
+            1. FINDINGS (Detailed description).
             2. COMPLIANCE ANALYSIS (Compliant/Non-Compliant with {datos_ins['norma']}).
-            3. ROOT CAUSE (Technical origin of the issue).
-            4. RECOMMENDATIONS (Action plan).
+            3. ROOT CAUSE.
+            4. RECOMMENDATIONS.
             {instruccion_costos}
             Tone: Professional, Technical, Executive.
             """
@@ -126,13 +126,11 @@ class InspectorIndustrial:
                 - Total (Bs) = Total ($) * {tasa_cambio}.
                 - Nota legal: "Estimación Clase 5 (-50%/+100%). Valores referenciales."
                 """
-
             prompt = f"""
             Rol: Inspector Experto en {datos_ins['modulo']}. Norma: {datos_ins['norma']}.
             Contexto: {datos_tec}
             Tarea: Auditoría visual de {len(lista_imagenes_pil)} imágenes.
             IDIOMA DE SALIDA: ESPAÑOL.
-            
             REPORTE TÉCNICO:
             1. HALLAZGOS (Descripción detallada).
             2. ANÁLISIS NORMATIVO (¿Cumple/No Cumple? Criterio: {datos_ins['norma']}).
@@ -150,25 +148,37 @@ class InspectorIndustrial:
             return text
         except Exception as e: return f"Error IA: {str(e)}"
 
+    # --- FUNCIÓN CORREGIDA PARA PDF ---
     def generar_pdf_ia(self, datos, texto_ia, rutas_imagenes, idioma="Español"):
+        
+        # Función auxiliar para eliminar emojis y caracteres raros
+        def limpiar(texto):
+            if not texto: return ""
+            # Convierte a latin-1 ignorando errores (borra emojis) y regresa a string
+            return str(texto).encode('latin-1', 'ignore').decode('latin-1')
+
         pdf = PDFReport()
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
         
-        t_titulo = 'DICTAMEN TÉCNICO VIG.IA' if idioma == "Español" else 'VIG.IA TECHNICAL REPORT'
+        # Textos según idioma
+        t_titulo = 'DICTAMEN TECNICO VIG.IA' if idioma == "Español" else 'VIG.IA TECHNICAL REPORT'
         t_especialidad = 'Especialidad:' if idioma == "Español" else 'Specialty:'
         t_norma = 'Norma/Criterio:' if idioma == "Español" else 'Standard:'
         t_inspector = 'Inspector:' if idioma == "Español" else 'Inspector:'
         t_fecha = 'Fecha:' if idioma == "Español" else 'Date:'
         t_resultados = ' RESULTADOS' if idioma == "Español" else ' RESULTS'
-        t_evidencia = ' EVIDENCIA FOTOGRÁFICA' if idioma == "Español" else ' PHOTOGRAPHIC EVIDENCE'
+        t_evidencia = ' EVIDENCIA FOTOGRAFICA' if idioma == "Español" else ' PHOTOGRAPHIC EVIDENCE'
         
         pdf.set_font('Arial', 'B', 16)
+        # Limpiamos todo lo que entra al PDF
         pdf.cell(0, 10, t_titulo, 0, 1, 'C')
         pdf.set_font('Arial', '', 10)
-        pdf.cell(0, 6, f"{t_especialidad} {datos['modulo']}", 0, 1, 'C')
-        pdf.cell(0, 6, f"{t_norma} {datos['norma']}", 0, 1, 'C')
-        pdf.cell(0, 6, f"{t_inspector} {datos['usuario']} | {t_fecha} {datetime.datetime.now().strftime('%d/%m/%Y')}", 0, 1, 'C')
+        
+        # AQUI ESTABA EL ERROR: Limpiamos los datos del diccionario que traen emojis
+        pdf.cell(0, 6, f"{t_especialidad} {limpiar(datos['modulo'])}", 0, 1, 'C')
+        pdf.cell(0, 6, f"{t_norma} {limpiar(datos['norma'])}", 0, 1, 'C')
+        pdf.cell(0, 6, f"{t_inspector} {limpiar(datos['usuario'])} | {t_fecha} {datetime.datetime.now().strftime('%d/%m/%Y')}", 0, 1, 'C')
         pdf.ln(10)
         
         pdf.set_fill_color(50, 50, 50) 
@@ -178,8 +188,10 @@ class InspectorIndustrial:
         pdf.ln(5)
         
         pdf.set_font('Arial', '', 11)
+        # Limpieza profunda del texto de la IA
         texto_limpio = texto_ia.replace('**', '').replace('##', '').replace('•', '-')
-        texto_limpio = texto_limpio.encode('latin-1', 'replace').decode('latin-1')
+        texto_limpio = limpiar(texto_limpio)
+        
         pdf.multi_cell(0, 6, texto_limpio)
         
         if rutas_imagenes:
@@ -200,8 +212,10 @@ class InspectorIndustrial:
                         pdf.ln(10)
                     except: pass
         
+        # Generar salida segura
         return pdf.output(dest='S').encode('latin-1')
 
+# --- CLASE PDF ---
 class PDFReport(FPDF):
     def header(self):
         if os.path.exists("logo.png"):
