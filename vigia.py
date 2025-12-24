@@ -1,22 +1,20 @@
 # PROYECTO: VIG.IA - SISTEMA DE INTELIGENCIA INDUSTRIAL
 # ARCHIVO: vigia.py
-# VERSIÓN: 1.5 (VENEZUELA EDITION: DUAL CURRENCY + AUTO RATE)
+# VERSIÓN: 1.6 (SUPER MENU UNIVERSAL)
 
 import streamlit as st
 import tempfile
 import os
 import time
-import requests # Nueva librería para buscar la tasa
+import requests
 from Nucleo_Vigia import InspectorIndustrial
 
 # --- ⚠️ ZONA DE CONFIGURACIÓN ---
 CLAVE_MAESTRA = "admin123" 
 # --------------------------------
 
-# 1. CONFIGURACIÓN DE PÁGINA
-st.set_page_config(page_title="VIG.IA | Venezuela", page_icon="🇻🇪", layout="wide")
+st.set_page_config(page_title="VIG.IA | Universal", page_icon="🇻🇪", layout="wide")
 
-# 2. INYECCIÓN DE ESTILO (MOBILE FIRST)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
@@ -25,7 +23,6 @@ st.markdown("""
     [data-testid="stSidebar"] { background-color: #f4f4f4; }
     h1, h2, h3 { color: #FF6F00 !important; font-weight: 700; }
     
-    /* BOTONES TÁCTILES */
     div.stButton > button:first-child {
         background-color: #FF6F00; 
         color: white; 
@@ -45,7 +42,6 @@ st.markdown("""
     }
     button[kind="secondary"] { border-color: #FF6F00; color: #FF6F00; }
 
-    /* MODO APP LIMPIO */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;} 
@@ -53,17 +49,15 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNCIÓN: BUSCAR TASA AUTOMÁTICA ---
 def obtener_tasa_dia():
     try:
-        # Usamos una API pública gratuita para obtener referencia
         url = "https://api.exchangerate-api.com/v4/latest/USD"
         response = requests.get(url, timeout=5)
         datos = response.json()
         tasa = datos['rates']['VES']
         return round(tasa, 2)
     except:
-        return 60.00 # Tasa de respaldo por si falla internet
+        return 60.00
 
 # --- LOGIN ---
 def check_password():
@@ -76,7 +70,7 @@ def check_password():
     col_spacer1, col_login, col_spacer2 = st.columns([1, 2, 1])
     with col_login:
         st.markdown("<br><h1 style='text-align: center; color: #333;'>🇻🇪 VIG.IA</h1>", unsafe_allow_html=True)
-        st.markdown("<h4 style='text-align: center; color: #666;'>VENEZUELA INTELLIGENCE</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; color: #666;'>UNIVERSAL INTELLIGENCE</h4>", unsafe_allow_html=True)
         st.markdown("---")
         pwd = st.text_input("Credencial de Acceso:", type="password")
         
@@ -106,10 +100,10 @@ inspector = st.session_state.inspector
 try: API_KEY_NUBE = st.secrets["GOOGLE_API_KEY"]
 except: API_KEY_NUBE = ""
 
-# --- SIDEBAR CON TASA CAMBIARIA ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.markdown("# 🇻🇪 VIG.IA")
-    st.markdown("**Versión 1.5 (VE)**")
+    st.markdown("**Versión 1.6 (Universal)**")
     st.markdown("---")
     
     if CLAVE_MAESTRA:
@@ -126,30 +120,26 @@ with st.sidebar:
         api_key = st.text_input("🔑 API Key:", type="password")
 
     st.markdown("---")
-    st.markdown("### 💰 Paridad Cambiaria")
+    st.markdown("### 💰 Tasa de Cambio")
     
-    # Lógica de Tasa
     if 'tasa_actual' not in st.session_state:
         st.session_state['tasa_actual'] = obtener_tasa_dia()
     
     col_tasa1, col_tasa2 = st.columns([2,1])
-    tasa_usuario = col_tasa1.number_input("Tasa (Bs/USD):", value=st.session_state['tasa_actual'], step=0.1, format="%.2f")
+    tasa_usuario = col_tasa1.number_input("Bs/USD:", value=st.session_state['tasa_actual'], step=0.1, format="%.2f")
     if col_tasa2.button("🔄"):
         st.session_state['tasa_actual'] = obtener_tasa_dia()
         st.rerun()
     
-    st.caption("Verifique si usa Tasa BCV o Mercado.")
-
     st.markdown("---")
     st.markdown("### 👷‍♂️ Datos Proyecto")
     usuario = st.text_input("Inspector:", "Gerente Angel Portillo")
-    proyecto = st.text_input("Tag / Activo:", "Tanque / Tubería")
+    proyecto = st.text_input("Tag / Activo:", "Inspección General")
     activar_costos = st.checkbox("Estimar Costos (Bs/$)", value=True)
 
 # --- TABS ---
 tab1, tab2 = st.tabs(["🕵️ CAMPO", "📜 MEMORIA"])
 
-# === PESTAÑA 1: INSPECCIÓN ===
 with tab1:
     st.subheader("1. Evidencia Visual")
     archivo_camara = st.camera_input("📸 FOTO AHORA", label_visibility="visible")
@@ -169,10 +159,13 @@ with tab1:
     st.markdown("---")
     st.subheader("2. Datos Técnicos")
     
+    # MENÚ DINÁMICO DESDE EL CEREBRO
     modulo = st.selectbox("Especialidad:", inspector.obtener_modulos())
-    norma = st.selectbox("Norma:", inspector.obtener_normas(modulo))
+    norma = st.selectbox("Norma / Criterio:", inspector.obtener_normas(modulo))
     
+    # FORMULARIOS INTELIGENTES
     datos_tecnicos = ""
+    
     if "MECÁNICO" in modulo:
         c1, c2 = st.columns(2)
         diametro = c1.number_input("Diám (m):", 0.0, 100.0, 15.0)
@@ -180,25 +173,30 @@ with tab1:
         material = c1.text_input("Material:", "Acero ASTM A36")
         fluido = c2.text_input("Fluido:", "Crudo")
         datos_tecnicos = f"Equipo Estático. Dimensiones: {diametro}x{altura}m. Material: {material}. Fluido: {fluido}."
+        
     elif "ELÉCTRICO" in modulo:
         c1, c2 = st.columns(2)
         voltaje = c1.selectbox("Voltaje:", ["110/220V", "440V", "13.8kV", "115kV"])
-        equipo = c2.text_input("Equipo:", "Transformador")
+        equipo = c2.text_input("Equipo:", "Transformador/Tablero")
         datos_tecnicos = f"Equipo Eléctrico: {equipo}. Tensión: {voltaje}."
+        
     elif "SOLDADURA" in modulo:
         proceso = st.selectbox("Proceso:", ["SMAW", "GTAW", "GMAW", "FCAW"])
         posicion = st.selectbox("Posición:", ["1G", "2G", "3G", "4G", "6G"])
         datos_tecnicos = f"Inspección Soldadura. Proceso: {proceso}. Posición: {posicion}."
+        
     else:
-        datos_tecnicos = st.text_area("Notas de campo:", height=100)
+        # ESTE ES EL CAMPO MÁGICO PARA "UNIVERSAL", "CIVIL", "SEGURIDAD", ETC.
+        st.info(f"📝 Modo: {modulo}. Describa lo que ve para ayudar a la IA.")
+        datos_tecnicos = st.text_area("Contexto / Observaciones:", height=100, placeholder="Ej: Pared con manchas de humedad, Vehículo con faro roto, Personal sin casco...")
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    if st.button("🚀 INICIAR ANÁLISIS VENEZUELA", use_container_width=True):
+    if st.button("🚀 INICIAR ANÁLISIS UNIVERSAL", use_container_width=True):
         if not api_key: st.error("⛔ Falta API Key.")
         elif not lista_imagenes: st.error("⚠️ Falta Evidencia.")
         else:
-            with st.spinner(f"⚡ Analizando costos a Tasa: {tasa_usuario} Bs/$..."):
+            with st.spinner(f"⚡ Analizando con Criterio: {modulo}..."):
                 rutas_temporales = []
                 for img_file in lista_imagenes:
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
@@ -207,7 +205,6 @@ with tab1:
                 
                 info = {"usuario": usuario, "proyecto": proyecto, "modulo": modulo, "norma": norma}
                 
-                # PASAMOS LA TASA AL CEREBRO
                 resultado = inspector.analizar_imagen_con_ia(api_key, rutas_temporales, info, datos_tecnicos, activar_costos, tasa_usuario)
                 
                 st.session_state['res_web'] = resultado
@@ -224,7 +221,6 @@ with tab1:
             pdf = inspector.generar_pdf_ia(st.session_state['info_web'], st.session_state['res_web'], st.session_state['imgs_web'])
             st.download_button("Guardar PDF", pdf, "Reporte_VIGIA_VE.pdf", "application/pdf", use_container_width=True)
 
-# === PESTAÑA 2: MEMORIA ===
 with tab2:
     col_head, col_trash = st.columns([3, 1])
     with col_head: st.header("Historial")
@@ -239,7 +235,7 @@ with tab2:
     if historial:
         for fila in historial:
             with st.expander(f"📅 {fila[0]} | {fila[1]}"):
-                st.markdown(f"**Norma:** {fila[3]}")
+                st.markdown(f"**Especialidad:** {fila[2]}")
                 st.caption("Resumen:")
                 st.markdown(fila[4][:200] + "...")
     else: st.info("Sin registros.")
